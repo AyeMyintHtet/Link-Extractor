@@ -6,8 +6,12 @@ export type CrawlMode = "fast" | "spider";
 
 export type LinkNode = {
   url: string;
+  status?: number;
   error?: string;
   firewall?: string;
+  seoIssues?: {
+    missingAltImages: string[];
+  };
   children: LinkNode[] | null;
 };
 
@@ -56,11 +60,22 @@ async function crawlPath(
     const firewall = detectFirewall(response.headers);
 
     if (!response.ok) {
-      return { url: validUrl.toString(), error: `Status ${response.status}`, firewall, children: null };
+      return { url: validUrl.toString(), status: response.status, error: `Status ${response.status}`, firewall, children: null };
     }
 
     const html = await response.text();
     const $ = cheerio.load(html);
+
+    const missingAltImages: string[] = [];
+    $('img').each((_, el) => {
+      const alt = $(el).attr('alt');
+      // If the alt attribute is missing entirely or contains only whitespace
+      if (alt === undefined || alt.trim() === '') {
+        const src = $(el).attr('src') || 'Unknown Image';
+        missingAltImages.push(src);
+      }
+    });
+    const seoIssues = missingAltImages.length > 0 ? { missingAltImages } : undefined;
 
     // Extract all unique absolute links on THIS page
     const linkSet = new Set<string>();
@@ -199,7 +214,9 @@ async function crawlPath(
     if (currentDepth >= maxDepth) {
       return {
         url: validUrl.toString(),
+        status: response.status,
         firewall,
+        seoIssues,
         children: novelLinks.length > 0 ? novelLinks.map(l => ({ url: l, children: null })) : null
       };
     }
@@ -250,12 +267,14 @@ async function crawlPath(
 
     return {
       url: validUrl.toString(),
+      status: response.status,
       firewall,
+      seoIssues,
       children: allChildren.length > 0 ? allChildren : null
     };
 
-  } catch {
-    return { url: validUrl.toString(), error: "Extraction Failed", children: null };
+  } catch (err: any) {
+    return { url: validUrl.toString(), error: err.message || "Extraction Failed", children: null };
   }
 }
 

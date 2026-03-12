@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Link2, Loader2, Sparkles, AlertCircle, ArrowRight, ExternalLink, CornerDownRight, ChevronRight, ChevronDown, FileWarning, Shield } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Link2, Loader2, Sparkles, AlertCircle, ArrowRight, ExternalLink, CornerDownRight, ChevronRight, ChevronDown, FileWarning, Shield, Activity, ImageIcon, Target } from "lucide-react";
 import { extractLinksAction, type LinkNode } from "./actions";
 
 // Recursive component to render the Tree Nodes
@@ -36,11 +36,28 @@ function TreeNodeUI({ node, depth = 0 }: { node: LinkNode; depth?: number }) {
             <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
           </a>
 
-          {node.error && (
-            <span className="text-xs text-red-400 flex items-center gap-1 mt-1 font-mono bg-red-500/10 w-fit px-2 py-0.5 rounded">
+          {(node.error || (node.status && node.status >= 400)) && (
+            <span className="text-xs text-red-400 flex items-center gap-1 mt-1 font-mono bg-red-500/10 w-fit px-2 py-0.5 rounded border border-red-500/20">
               <FileWarning className="w-3 h-3" />
-              {node.error}
+              {node.status && node.status >= 400 ? `Broken Link (${node.status})` : node.error}
             </span>
+          )}
+
+          {node.seoIssues?.missingAltImages && node.seoIssues.missingAltImages.length > 0 && (
+            <div className="mt-2 text-left">
+              <span className="text-xs text-amber-400 flex items-center gap-1 font-mono bg-amber-500/10 w-fit px-2 py-0.5 rounded border border-amber-500/20 mb-1">
+                <ImageIcon className="w-3 h-3 text-amber-500 shrink-0" />
+                Missing Alt Header/Text ({node.seoIssues.missingAltImages.length})
+              </span>
+              <ul className="text-xs text-slate-500 list-disc ml-5 break-all max-w-sm">
+                {node.seoIssues.missingAltImages.slice(0, 3).map((img, i) => (
+                  <li key={i}>{img.length > 50 ? img.slice(0, 50) + '...' : img}</li>
+                ))}
+                {node.seoIssues.missingAltImages.length > 3 && (
+                  <li className="italic">...and {node.seoIssues.missingAltImages.length - 3} more</li>
+                )}
+              </ul>
+            </div>
           )}
 
           {node.firewall && (
@@ -69,6 +86,26 @@ export default function LinkExtractor() {
   const [loading, setLoading] = useState(false);
   const [treeData, setTreeData] = useState<LinkNode | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Computed SEO Summary
+  const seoSummary = useMemo(() => {
+    if (!treeData) return null;
+    let scanned = 0;
+    let broken = 0;
+    let missingAlts = 0;
+
+    function walk(n: LinkNode) {
+      scanned++;
+      if ((n.status && n.status >= 400) || n.error) broken++;
+      if (n.seoIssues?.missingAltImages) {
+        missingAlts += n.seoIssues.missingAltImages.length;
+      }
+      if (n.children) n.children.forEach(walk);
+    }
+
+    walk(treeData);
+    return { scanned, broken, missingAlts };
+  }, [treeData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,14 +140,22 @@ export default function LinkExtractor() {
 
         {/* Header Section */}
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center p-4 bg-indigo-500/10 rounded-2xl mb-2 shadow-[0_0_30px_rgba(99,102,241,0.15)] ring-1 ring-white/5">
-            <Link2 className="w-8 h-8 text-indigo-400" />
+          <svg width="0" height="0" className="absolute">
+            <defs>
+              <linearGradient id="brand-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#FD8451" />
+                <stop offset="100%" stopColor="#FFBD6F" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div className="inline-flex items-center justify-center p-4 bg-[#FD8451]/10 rounded-2xl mb-2 shadow-[0_0_30px_rgba(253,132,81,0.15)] ring-1 ring-white/5">
+            <Target className="w-8 h-8" color="url(#brand-gradient)" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-r from-blue-400 to-indigo-400">
-            Professional Link Extractor
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-br from-[#FD8451] to-[#FFBD6F]">
+            Broken Link & SEO Auditor
           </h1>
           <p className="text-slate-400 text-lg md:text-xl max-w-xl mx-auto font-light">
-            Instantly map out a website&apos;s network by traversing links and visualizing them.
+            Crawl any website to instantly find broken links, 404s, and images missing SEO-friendly Alt Text.
           </p>
         </div>
 
@@ -123,14 +168,14 @@ export default function LinkExtractor() {
               <button
                 type="button"
                 onClick={() => setMode("fast")}
-                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${mode === "fast" ? 'bg-indigo-500/20 text-indigo-300 shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${mode === "fast" ? 'bg-[#FD8451]/20 text-[#FFBD6F] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
               >
                 Fast Map
               </button>
               <button
                 type="button"
                 onClick={() => setMode("spider")}
-                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${mode === "spider" ? 'bg-indigo-500/20 text-indigo-300 shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${mode === "spider" ? 'bg-[#FD8451]/20 text-[#FFBD6F] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
               >
                 Deep Spider
               </button>
@@ -153,16 +198,16 @@ export default function LinkExtractor() {
               <button
                 type="submit"
                 disabled={loading || !url}
-                className="group relative flex items-center justify-center gap-2 bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-4 rounded-xl font-medium transition-all duration-200 active:scale-[0.98] shadow-lg shadow-indigo-500/25 shrink-0"
+                className="group relative flex items-center justify-center gap-2 bg-linear-to-br from-[#FD8451] to-[#FFBD6F] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-4 rounded-xl font-medium transition-all duration-200 active:scale-[0.98] shadow-lg shadow-[#FD8451]/25 shrink-0"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>{mode === "spider" ? "Spidering..." : "Crawling..."}</span>
+                    <span>{mode === "spider" ? "Auditing..." : "Scanning..."}</span>
                   </>
                 ) : (
                   <>
-                    <span>Map Site</span>
+                    <span>Run Audit</span>
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
@@ -179,13 +224,36 @@ export default function LinkExtractor() {
           </div>
         )}
 
+        {/* Results Container: Summary */}
+        {seoSummary && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+              <Activity className="w-6 h-6 text-blue-400 mb-2" />
+              <div className="text-3xl font-bold text-slate-100">{seoSummary.scanned}</div>
+              <div className="text-sm font-medium text-slate-400 mt-1">Pages & Links Scanned</div>
+            </div>
+            <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+              <div className={`absolute inset-0 opacity-10 transition-opacity ${seoSummary.broken > 0 ? 'bg-red-500 group-hover:opacity-20' : 'bg-emerald-500 group-hover:opacity-20'}`}></div>
+              <FileWarning className={`w-6 h-6 mb-2 ${seoSummary.broken > 0 ? 'text-red-400' : 'text-emerald-400'}`} />
+              <div className="text-3xl font-bold text-slate-100">{seoSummary.broken}</div>
+              <div className="text-sm font-medium text-slate-400 mt-1">Broken Links (404s)</div>
+            </div>
+            <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+              <div className={`absolute inset-0 opacity-10 transition-opacity ${seoSummary.missingAlts > 0 ? 'bg-amber-500 group-hover:opacity-20' : 'bg-emerald-500 group-hover:opacity-20'}`}></div>
+              <ImageIcon className={`w-6 h-6 mb-2 ${seoSummary.missingAlts > 0 ? 'text-amber-400' : 'text-emerald-400'}`} />
+              <div className="text-3xl font-bold text-slate-100">{seoSummary.missingAlts}</div>
+              <div className="text-sm font-medium text-slate-400 mt-1">Images Missing Alt Text</div>
+            </div>
+          </div>
+        )}
+
         {/* Results Container: Flow Tree */}
         {treeData && (
           <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
               <h2 className="text-lg font-semibold text-slate-300 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-400" />
-                Result Diagram
+                <Sparkles className="w-5 h-5 text-emerald-400" />
+                Detailed Report
               </h2>
             </div>
 

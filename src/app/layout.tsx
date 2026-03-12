@@ -13,21 +13,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Deep Spider | Professional Link Extractor & Web Scraper",
-  description: "Extract hidden web links, build visual sitemaps, and detect Web Application Firewalls (Cloudflare, Sucuri, Hostinger) with our powerful deep-crawling spider.",
-  keywords: ["web scraper", "link extractor", "sitemap generator", "SEO tool", "WAF detector", "cloudflare bypass"],
-  authors: [{ name: "LinkCrawler" }],
+  title: "Broken Link & SEO Auditor",
+  description: "Crawl your website to instantly identify broken links and images missing SEO-friendly ALT text.",
+  keywords: ["seo auditor", "broken link checker", "web crawler", "missing alt text", "seo tool"],
+  authors: [{ name: "SEO Auditor" }],
   openGraph: {
-    title: "Deep Spider | Professional Link Extractor",
-    description: "Extract hidden web links, build visual sitemaps, and detect Web Application Firewalls instantly.",
+    title: "Broken Link & SEO Auditor",
+    description: "Crawl your website to instantly identify broken links and images missing SEO-friendly ALT text.",
     type: "website",
     locale: "en_US",
-    siteName: "Deep Spider",
+    siteName: "SEO Auditor",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Deep Spider | Professional Link Extractor",
-    description: "Extract hidden web links, build visual sitemaps, and detect Web Application Firewalls instantly.",
+    title: "Broken Link & SEO Auditor",
+    description: "Crawl your website to instantly identify broken links and images missing SEO-friendly ALT text.",
   },
   robots: {
     index: true,
