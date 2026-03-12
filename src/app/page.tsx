@@ -196,6 +196,10 @@ export default function LinkExtractor() {
             </div>
           </div>
         )}
+
+        <footer className="w-full text-center mt-8 py-4 text-slate-500 text-sm font-light">
+          &copy; {new Date().getFullYear()} Aye Myint Htet @ June
+        </footer>
       </div>
     </main>
   );
