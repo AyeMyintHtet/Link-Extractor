@@ -107,7 +107,7 @@ export default function LinkExtractor() {
             <Link2 className="w-8 h-8 text-indigo-400" />
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-r from-blue-400 to-indigo-400">
-            Link Extractor
+            Professional Link Extractor
           </h1>
           <p className="text-slate-400 text-lg md:text-xl max-w-xl mx-auto font-light">
             Instantly map out a website&apos;s network by traversing links and visualizing them.

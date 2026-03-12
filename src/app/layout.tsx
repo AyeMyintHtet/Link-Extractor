@@ -40,6 +40,11 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
+  icons: {
+    icon: [
+      { url: '/favi.svg', type: 'image/svg+xml' }
+    ]
+  }
 };
 
 export default function RootLayout({
