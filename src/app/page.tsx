@@ -1,18 +1,35 @@
-"use client";
-
+"use client"
 import { useState, useMemo } from "react";
-import { Link2, Loader2, Sparkles, AlertCircle, ArrowRight, ExternalLink, CornerDownRight, ChevronRight, ChevronDown, FileWarning, Shield, Activity, ImageIcon, Target } from "lucide-react";
-import { extractLinksAction, type LinkNode } from "./actions";
+import {
+  Link2, Loader2, Sparkles, AlertCircle, ArrowRight, ExternalLink,
+  CornerDownRight, ChevronRight, ChevronDown, FileWarning, Shield,
+  Activity, ImageIcon, Target, Search, Filter, Download, Share2,
+  Layout, List, Info, Type, MessageSquare, Globe, Twitter, Eye, X
+} from "lucide-react";
+import { type LinkNode } from "./actions";
 
 // Recursive component to render the Tree Nodes
-function TreeNodeUI({ node, depth = 0 }: { node: LinkNode; depth?: number }) {
+function TreeNodeUI({ node, depth = 0, filterText = "", onlyIssues = false }: {
+  node: LinkNode;
+  depth?: number;
+  filterText?: string;
+  onlyIssues?: boolean;
+}) {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = node.children && node.children.length > 0;
-  console.log('node', node)
+  const [showMetadata, setShowMetadata] = useState(false);
+
+  // Determine if this node should be visible based on filters
+  const isMatch = node.url.toLowerCase().includes(filterText.toLowerCase());
+  const hasIssue = (node.status && node.status >= 400) || node.error || (node.seoIssues?.missingAltImages?.length || 0) > 0;
+
+  if (filterText && !isMatch && !hasChildren) return null;
+  if (onlyIssues && !hasIssue && !hasChildren) return null;
+
   return (
     <div className="flex flex-col">
       <div
-        className={`flex items-start gap-2 py-2 px-3 rounded-lg transition-colors group ${depth === 0 ? 'bg-blue-500/10 border border-blue-500/20' : 'hover:bg-slate-800/50'}`}
+        className={`flex items-start gap-2 py-2 px-3 rounded-lg transition-all group border border-transparent ${depth === 0 ? 'bg-blue-500/10 border-blue-500/20' : 'hover:bg-slate-800/50'}`}
         style={{ marginLeft: `${depth * 24}px` }}
       >
         <button
@@ -25,46 +42,103 @@ function TreeNodeUI({ node, depth = 0 }: { node: LinkNode; depth?: number }) {
 
         {depth > 0 && <CornerDownRight className="w-4 h-4 mt-1 shrink-0 text-slate-600" />}
 
-        <div className="flex flex-col min-w-0">
-          <a
-            href={node.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-medium text-slate-300 hover:text-blue-400 break-all transition-colors flex items-center gap-2"
-          >
-            {node.url}
-            <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </a>
+        <div className="flex flex-col min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <a
+              href={node.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-slate-300 hover:text-blue-400 break-all transition-colors flex items-center gap-2"
+            >
+              {node.url}
+              <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
 
-          {(node.error || (node.status && node.status >= 400)) && (
-            <span className="text-xs text-red-400 flex items-center gap-1 mt-1 font-mono bg-red-500/10 w-fit px-2 py-0.5 rounded border border-red-500/20">
-              <FileWarning className="w-3 h-3" />
-              {node.status && node.status >= 400 ? `Broken Link (${node.status})` : node.error}
-            </span>
-          )}
-
-          {node.seoIssues?.missingAltImages && node.seoIssues.missingAltImages.length > 0 && (
-            <div className="mt-2 text-left">
-              <span className="text-xs text-amber-400 flex items-center gap-1 font-mono bg-amber-500/10 w-fit px-2 py-0.5 rounded border border-amber-500/20 mb-1">
-                <ImageIcon className="w-3 h-3 text-amber-500 shrink-0" />
-                Missing Alt Header/Text ({node.seoIssues.missingAltImages.length})
+            {node.seoData?.title && (
+              <span className="text-[10px] uppercase tracking-wider font-bold bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 inline-block">
+                {node.seoData.title.slice(0, 30)}{node.seoData.title.length > 30 ? '...' : ''}
               </span>
-              <ul className="text-xs text-slate-500 list-disc ml-5 break-all max-w-sm">
-                {node.seoIssues.missingAltImages.slice(0, 3).map((img, i) => (
-                  <li key={i}>{img.length > 50 ? img.slice(0, 50) + '...' : img}</li>
-                ))}
-                {node.seoIssues.missingAltImages.length > 3 && (
-                  <li className="italic">...and {node.seoIssues.missingAltImages.length - 3} more</li>
-                )}
-              </ul>
-            </div>
-          )}
+            )}
+          </div>
 
-          {node.firewall && (
-            <span className="text-xs text-orange-400 flex items-center gap-1 mt-1 font-mono bg-orange-500/10 w-fit px-2 py-0.5 rounded border border-orange-500/20 shadow-sm" title={`Protected by ${node.firewall}`}>
-              <Shield className="w-3 h-3 text-orange-400" />
-              Secured by {node.firewall}
-            </span>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {(node.error || (node.status && node.status >= 400)) && (
+              <span className="text-[10px] text-red-400 flex items-center gap-1 font-semibold bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+                <FileWarning className="w-3 h-3" />
+                {node.status && node.status >= 400 ? `Broken (${node.status})` : node.error}
+              </span>
+            )}
+
+            {node.seoIssues?.missingAltImages && node.seoIssues.missingAltImages.length > 0 && (
+              <span className="text-[10px] text-amber-400 flex items-center gap-1 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                <ImageIcon className="w-3 h-3 text-amber-500 shrink-0" />
+                Missing Alt ({node.seoIssues.missingAltImages.length})
+              </span>
+            )}
+
+            {node.firewall && (
+              <span className="text-[10px] text-orange-400 flex items-center gap-1 font-semibold bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20 shadow-sm">
+                <Shield className="w-3 h-3 text-orange-400" />
+                {node.firewall}
+              </span>
+            )}
+
+            {node.seoData && (
+              <button
+                onClick={() => setShowMetadata(!showMetadata)}
+                className="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+              >
+                <Eye className="w-3 h-3" />
+                {showMetadata ? 'Hide SEO' : 'View SEO'}
+              </button>
+            )}
+          </div>
+
+          {/* Expanded Metadata View */}
+          {showMetadata && node.seoData && (
+            <div className="mt-3 p-4 bg-slate-900/80 rounded-xl border border-slate-800 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                    <Globe className="w-3 h-3" /> Basic Info
+                  </label>
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-300"><span className="text-slate-500">Title:</span> {node.seoData.title || <span className="text-red-500/50">Missing</span>}</p>
+                    <p className="text-xs text-slate-400 leading-relaxed"><span className="text-slate-500">Desc:</span> {node.seoData.description || <span className="text-red-500/50">Missing</span>}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                    <Twitter className="w-3 h-3" /> Social Metadata
+                  </label>
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-300"><span className="text-slate-500">OG Title:</span> {node.seoData.ogTitle || 'None'}</p>
+                    <p className="text-xs text-slate-400"><span className="text-slate-500">Tw Card:</span> {node.seoData.twitterCard || 'None'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-800">
+                <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1 mb-2">
+                  <Type className="w-3 h-3" /> Heading Structure
+                </label>
+                <div className="flex flex-wrap gap-4">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-500">H1 ({node.seoData.h1?.length || 0})</span>
+                    <ul className="text-xs text-slate-400 list-disc ml-4">
+                      {node.seoData.h1?.slice(0, 2).map((h, i) => <li key={i}>{h}</li>)}
+                    </ul>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-500">H2 ({node.seoData.h2?.length || 0})</span>
+                    <ul className="text-xs text-slate-400 list-disc ml-4">
+                      {node.seoData.h2?.slice(0, 2).map((h, i) => <li key={i}>{h}</li>)}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -72,7 +146,7 @@ function TreeNodeUI({ node, depth = 0 }: { node: LinkNode; depth?: number }) {
       {isExpanded && hasChildren && (
         <div className="flex flex-col relative before:absolute before:inset-y-0 before:-left-3 before:w-px before:bg-slate-700/50" style={{ marginLeft: `${depth * 24 + 16}px` }}>
           {node.children!.map((child, idx) => (
-            <TreeNodeUI key={`${child.url}-${idx}`} node={child} depth={0} /> // depth reset to 0 because we handle margin in the wrapper
+            <TreeNodeUI key={`${child.url}-${idx}`} node={child} depth={0} filterText={filterText} onlyIssues={onlyIssues} />
           ))}
         </div>
       )}
@@ -86,6 +160,11 @@ export default function LinkExtractor() {
   const [loading, setLoading] = useState(false);
   const [treeData, setTreeData] = useState<LinkNode | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // UI States
+  const [filterText, setFilterText] = useState("");
+  const [onlyIssues, setOnlyIssues] = useState(false);
+  const [activeTab, setActiveTab] = useState<"tree" | "map">("tree");
 
   // Computed SEO Summary
   const seoSummary = useMemo(() => {
@@ -111,7 +190,6 @@ export default function LinkExtractor() {
     e.preventDefault();
     if (!url.trim()) return;
 
-    // Client-side URL validation
     const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i;
     if (!urlPattern.test(url.trim())) {
       setError("Please enter a valid URL (e.g., https://example.com)");
@@ -122,21 +200,100 @@ export default function LinkExtractor() {
     setError(null);
     setTreeData(null);
 
-    // Call the Recursive Server Action with the selected mode
-    const data = await extractLinksAction(url, mode);
+    try {
+      // Phase 4: Real-time Streaming Results
+      const response = await fetch(`/api/crawl?url=${encodeURIComponent(url)}&mode=${mode}`);
+      if (!response.ok) throw new Error("Crawl failed");
 
-    if (data?.error) {
-      setError(data.error);
-    } else if (data?.tree) {
-      setTreeData(data.tree);
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        let rootNode: LinkNode | null = null;
+        const nodesMap = new Map<string, LinkNode>();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n").filter(l => l.trim());
+
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line);
+              if (data.error) {
+                setError(data.error);
+                continue;
+              }
+
+              const newNode = data.node as LinkNode;
+              if (!newNode) continue;
+
+              // Register node in map
+              nodesMap.set(newNode.url, newNode);
+
+              if (!newNode.parentUrl) {
+                rootNode = newNode;
+                setTreeData({ ...newNode });
+              } else {
+                // Find parent and attach
+                const parent = nodesMap.get(newNode.parentUrl);
+                if (parent) {
+                  if (!parent.children) parent.children = [];
+                  // Avoid duplicates
+                  if (!parent.children.some(c => c.url === newNode.url)) {
+                    parent.children.push(newNode);
+                  }
+
+                  // Trigger re-render by updating root reference
+                  if (rootNode) {
+                    setTreeData({ ...rootNode });
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn("Could not parse chunk line", e);
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (!treeData) return;
+    const rows: string[][] = [["URL", "Status", "Error", "Title", "Missing Alt Text Count"]];
+
+    function walk(n: LinkNode) {
+      rows.push([
+        n.url,
+        n.status?.toString() || "",
+        n.error || "",
+        n.seoData?.title || "",
+        n.seoIssues?.missingAltImages?.length.toString() || "0"
+      ]);
+      if (n.children) n.children.forEach(walk);
     }
 
-    setLoading(false);
+    walk(treeData);
+    const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `audit-report-${new URL(url).hostname}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
     <main className="min-h-screen bg-linear-to-br flex flex-col items-center p-6 pt-12 md:pt-24 from-slate-950 via-gray-900 to-slate-950 font-sans text-slate-100 selection:bg-indigo-500/30 overflow-x-hidden">
-      <div className="w-full max-w-4xl space-y-8 animate-in fade-in zoom-in duration-700">
+      <div className="w-full max-w-5xl space-y-8 animate-in fade-in zoom-in duration-700">
 
         {/* Header Section */}
         <div className="text-center space-y-4">
@@ -247,20 +404,144 @@ export default function LinkExtractor() {
           </div>
         )}
 
-        {/* Results Container: Flow Tree */}
+        {/* Results Container: Detailed View */}
         {treeData && (
-          <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
-              <h2 className="text-lg font-semibold text-slate-300 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-emerald-400" />
-                Detailed Report
-              </h2>
+          <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+
+            {/* Toolbar */}
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center pb-6 border-b border-slate-800">
+              <div className="flex bg-slate-950/50 p-1 rounded-xl border border-slate-800 shrink-0">
+                <button
+                  onClick={() => setActiveTab("tree")}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === "tree" ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  Tree View
+                </button>
+                <button
+                  onClick={() => setActiveTab("map")}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === "map" ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  <Layout className="w-3.5 h-3.5" />
+                  Visual Map
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="relative grow md:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="Search results..."
+                    value={filterText}
+                    onChange={(e) => setFilterText(e.target.value)}
+                    className="w-full bg-slate-950/50 border border-slate-800 rounded-lg py-1.5 pl-9 pr-4 text-xs text-slate-300 focus:outline-none focus:border-blue-500/50"
+                  />
+                  {filterText && (
+                    <button onClick={() => setFilterText("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <X className="w-3 h-3 text-slate-500" />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setOnlyIssues(!onlyIssues)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${onlyIssues ? 'bg-red-500/10 border-red-500/50 text-red-400' : 'bg-slate-950/50 border-slate-800 text-slate-500'}`}
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  Issues Only
+                </button>
+
+                <button
+                  onClick={handleExportCSV}
+                  className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/50 rounded-lg text-xs font-semibold text-emerald-400 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export
+                </button>
+              </div>
             </div>
 
             <div className="w-full overflow-x-auto custom-scrollbar">
-              <div className="min-w-fit pr-8">
-                <TreeNodeUI node={treeData} depth={0} />
-              </div>
+              {activeTab === "tree" ? (
+                <div className="min-w-fit pr-8">
+                  <TreeNodeUI node={treeData} depth={0} filterText={filterText} onlyIssues={onlyIssues} />
+                </div>
+              ) : (
+                <div className="w-full h-full relative p-4 flex items-center justify-center overflow-auto custom-scrollbar">
+                  {/* Phase 5: Dynamic Site Map Visualization */}
+                  <svg width="100%" height="100%" viewBox="0 0 1000 1000" className="max-w-4xl mx-auto overflow-visible">
+                    <defs>
+                      <marker id="arrow" markerWidth="10" markerHeight="10" refX="25" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="#475569" />
+                      </marker>
+                    </defs>
+
+                    {/* Radial Distribution Logic */}
+                    {(() => {
+                      const nodes: Array<{ x: number, y: number, url: string, status?: number, error?: string }> = [];
+                      const links: Array<{ x1: number, y1: number, x2: number, y2: number }> = [];
+
+                      function plot(node: LinkNode, x: number, y: number, angle: number, angleRange: number, depth: number) {
+                        const id = nodes.length;
+                        nodes.push({ x, y, url: node.url, status: node.status, error: node.error });
+
+                        if (node.children && depth < 3) {
+                          const count = node.children.length;
+                          const startAngle = angle - angleRange / 2;
+                          const sliceAngle = angleRange / Math.max(count, 1);
+                          const radius = 240 / (depth + 1);
+
+                          node.children.forEach((child, i) => {
+                            const childAngle = startAngle + sliceAngle * (i + 0.5);
+                            const cx = x + radius * Math.cos(childAngle);
+                            const cy = y + radius * Math.sin(childAngle);
+
+                            links.push({ x1: x, y1: y, x2: cx, y2: cy });
+                            plot(child, cx, cy, childAngle, sliceAngle * 0.8, depth + 1);
+                          });
+                        }
+                      }
+
+                      if (treeData) plot(treeData, 500, 500, 0, Math.PI * 2, 0);
+
+                      return (
+                        <>
+                          {links.map((link, i) => (
+                            <line key={`l-${i}`} x1={link.x1} y1={link.y1} x2={link.x2} y2={link.y2} className="stroke-slate-800" strokeWidth="1.5" markerEnd="url(#arrow)" />
+                          ))}
+                          {nodes.map((node, i) => {
+                            const isBroken = (node.status && node.status >= 400) || node.error;
+                            return (
+                              <g key={`n-${i}`} className="group cursor-help">
+                                <circle
+                                  cx={node.x} cy={node.y} r={i === 0 ? 12 : 6}
+                                  className={`transition-all duration-300 ${i === 0 ? 'fill-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : isBroken ? 'fill-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'fill-slate-700 group-hover:fill-blue-400'}`}
+                                />
+                                <text
+                                  x={node.x} y={node.y - 12}
+                                  className="text-[10px] fill-slate-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity text-center pointer-events-none"
+                                  textAnchor="middle"
+                                >
+                                  {new URL(node.url).pathname !== '/' ? new URL(node.url).pathname.slice(-15) : 'root'}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </>
+                      );
+                    })()}
+                  </svg>
+
+                  {/* Legend */}
+                  <div className="absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur-sm border border-slate-800 p-2 px-3 rounded-lg flex flex-col gap-1 text-[10px] font-semibold">
+                    <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div><span className="text-slate-300">Root Page</span></div>
+                    <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-slate-700"></div><span className="text-slate-300">Healthy Link</span></div>
+                    <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div><span className="text-slate-300">Broken Link</span></div>
+                    <div className="mt-1 pt-1 border-t border-slate-800 text-slate-500 uppercase tracking-wider">Discovered: {seoSummary?.scanned || 0}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

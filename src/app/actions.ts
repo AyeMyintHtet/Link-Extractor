@@ -6,11 +6,23 @@ export type CrawlMode = "fast" | "spider";
 
 export type LinkNode = {
   url: string;
+  parentUrl?: string;
   status?: number;
   error?: string;
   firewall?: string;
   seoIssues?: {
     missingAltImages: string[];
+  };
+  seoData?: {
+    title?: string;
+    description?: string;
+    h1?: string[];
+    h2?: string[];
+    h3?: string[];
+    ogTitle?: string;
+    ogDescription?: string;
+    ogImage?: string;
+    twitterCard?: string;
   };
   children: LinkNode[] | null;
 };
@@ -36,7 +48,9 @@ async function crawlPath(
   baseDomain: string,
   maxDepth: number,      
   maxBranches: number,   
-  visited: Set<string>
+  visited: Set<string>,
+  onNodeDiscovered?: (node: LinkNode) => void,
+  parentUrl?: string
 ): Promise<LinkNode> {
   // Ensure the URL is valid
   let validUrl: URL;
@@ -65,6 +79,36 @@ async function crawlPath(
 
     const html = await response.text();
     const $ = cheerio.load(html);
+
+    // Extraction: Meta & Basic SEO
+    const title = $('title').text() || $('meta[property="og:title"]').attr('content') || '';
+    const description = $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || '';
+    
+    // Extraction: Headings
+    const h1: string[] = [];
+    $('h1').each((_, el) => { const text = $(el).text().trim(); if (text) h1.push(text); });
+    const h2: string[] = [];
+    $('h2').each((_, el) => { const text = $(el).text().trim(); if (text) h2.push(text); });
+    const h3: string[] = [];
+    $('h3').each((_, el) => { const text = $(el).text().trim(); if (text) h3.push(text); });
+
+    // Extraction: Social Media
+    const ogTitle = $('meta[property="og:title"]').attr('content');
+    const ogDescription = $('meta[property="og:description"]').attr('content');
+    const ogImage = $('meta[property="og:image"]').attr('content');
+    const twitterCard = $('meta[name="twitter:card"]').attr('content');
+
+    const seoData = {
+      title,
+      description,
+      h1,
+      h2,
+      h3,
+      ogTitle,
+      ogDescription,
+      ogImage,
+      twitterCard
+    };
 
     const missingAltImages: string[] = [];
     $('img').each((_, el) => {
@@ -211,14 +255,20 @@ async function crawlPath(
     }
 
     // If we have reached our max depth, stop recursing here but return the found links as leaf nodes
+    const leafNode: LinkNode = {
+      url: validUrl.toString(),
+      parentUrl,
+      status: response.status,
+      firewall,
+      seoIssues,
+      seoData,
+      children: novelLinks.length > 0 ? novelLinks.map(l => ({ url: l, children: null })) : null
+    };
+
+    if (onNodeDiscovered) onNodeDiscovered(leafNode);
+
     if (currentDepth >= maxDepth) {
-      return {
-        url: validUrl.toString(),
-        status: response.status,
-        firewall,
-        seoIssues,
-        children: novelLinks.length > 0 ? novelLinks.map(l => ({ url: l, children: null })) : null
-      };
+      return leafNode;
     }
 
     // Otherwise, we recurse further into the first N branches
@@ -247,12 +297,12 @@ async function crawlPath(
     
     // We want to fetch all the child branches in parallel for speed!
     const childPromises = branchesToFollow.map(childUrl => 
-      crawlPath(childUrl, currentDepth + 1, mode, baseDomain, maxDepth, maxBranches, visited)
+      crawlPath(childUrl, currentDepth + 1, mode, baseDomain, maxDepth, maxBranches, visited, onNodeDiscovered, validUrl.toString())
     );
     
     const childResults = await Promise.allSettled(childPromises);
     
-    const children: LinkNode[] = childResults.map((result, idx) => {
+    const childrenNodes: LinkNode[] = childResults.map((result, idx) => {
       // If the promise fulfilled successfully, return the scraped tree
       if (result.status === 'fulfilled') {
         return result.value;
@@ -261,24 +311,35 @@ async function crawlPath(
     });
 
     // Also include any links we skipped because of maxBranches limit, just as flat leaf nodes
-    // Also include any links we skipped/didn't recurse into as basic leaves
     const remainingLeaves = leafNodes.map(l => ({ url: l, children: null }));
-    const allChildren = [...children, ...remainingLeaves];
+    const allChildren = [...childrenNodes, ...remainingLeaves];
 
-    return {
+    const finalNode: LinkNode = {
       url: validUrl.toString(),
+      parentUrl,
       status: response.status,
       firewall,
       seoIssues,
+      seoData,
       children: allChildren.length > 0 ? allChildren : null
     };
 
+    if (onNodeDiscovered) onNodeDiscovered(finalNode);
+
+    return finalNode;
+
   } catch (err: any) {
-    return { url: validUrl.toString(), error: err.message || "Extraction Failed", children: null };
+    const errorNode = { url: validUrl.toString(), parentUrl, error: err.message || "Extraction Failed", children: null };
+    if (onNodeDiscovered) onNodeDiscovered(errorNode);
+    return errorNode;
   }
 }
 
-export async function extractLinksAction(url: string, mode: CrawlMode = "fast") {
+export async function extractLinksAction(
+  url: string, 
+  mode: CrawlMode = "fast",
+  onNodeDiscovered?: (node: LinkNode) => void
+) {
   if (!url) {
     return { error: "URL is required" };
   }
@@ -296,7 +357,7 @@ export async function extractLinksAction(url: string, mode: CrawlMode = "fast") 
     const baseDomain = validUrl.hostname;
 
     // Initiate the crawl from depth 0
-    const tree = await crawlPath(validUrl.toString(), 0, mode, baseDomain, maxDepth, maxBranches, visited);
+    const tree = await crawlPath(validUrl.toString(), 0, mode, baseDomain, maxDepth, maxBranches, visited, onNodeDiscovered);
     return { tree };
   } catch (error) {
     console.error("Scraping Error:", error);
