@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎯 Broken Link & SEO Auditor
 
-## Getting Started
+A powerful, high-performance web crawler built with **Next.js 15**, **TypeScript**, and **Cheerio**. Instantly audit any website for broken links (404s) and identify missing image Alt Text to boost your site's SEO.
 
-First, run the development server:
+![Broken Link Auditor Demo](https://raw.githubusercontent.com/lucide-react/lucide/main/icons/target.svg)
+
+## 🚀 Key Features
+
+- **⚡ Fast Map Mode**: Rapidly scan top-level links and immediate children for a quick health check.
+- **🕷️ Deep Spider Mode**: Exhaustive crawling that follows internal links up to 4 levels deep, including hidden links found in JS/JSON and Sitemap XML parsing.
+- **🛡️ WAF Detection**: Automatically identifies if a site is protected by Cloudflare, Sucuri, Akamai, and other Firewalls.
+- **📊 Interactive SEO Summary**: Get a bird's-eye view of total scanned links, broken links, and missing alt attributes.
+- **🌲 Detailed Flow Tree**: A recursive, expandable tree view of your site's architecture and issues.
+
+## 🛠️ Tech Stack
+
+- **Framework**: [Next.js 15+](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Scraping Engine**: [Cheerio](https://cheerio.js.org/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+
+## 🏁 Getting Started
+
+### 1. Clone & Install
+
+```bash
+git clone <your-repo-url>
+cd supabase-nextjs-chatapp
+npm install
+```
+
+### 2. Run Locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📂 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `src/app/page.tsx`: The stunning, glassmorphic UI for the auditor.
+- `src/app/actions.ts`: High-performance recursive Server Actions for web crawling and link extraction.
+- `src/app/globals.css`: Modern Tailwind CSS configurations and animations.
 
-## Learn More
+## 🛡️ Security Note
 
-To learn more about Next.js, take a look at the following resources:
+This tool is designed for auditing sites you own or have permission to scan. Please be mindful of a website's `robots.txt` and crawling frequency to avoid being flagged as malicious traffic.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built with ❤️ by [Aye Myint Htet](https://github.com/ayemyinthtet)
